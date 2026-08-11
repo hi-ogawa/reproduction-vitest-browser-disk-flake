@@ -8,7 +8,7 @@ mkdirSync('src', { recursive: true });
 for (let i = 0; i < N; i++) {
   writeFileSync(
     `src/empty-${i}.test.js`,
-    `test('empty ${i}', () => { document.body.appendChild(document.createElement('div')); });\n`,
+    `import { test } from 'vitest';\n\ntest('empty ${i}', () => { document.body.appendChild(document.createElement('div')); });\n`,
   );
 }
 
