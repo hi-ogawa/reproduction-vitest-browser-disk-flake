@@ -4,13 +4,14 @@ on: [push, workflow_dispatch]
 jobs:
   repro:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
-        # Same code, same test files — only the free disk differs.
-        # Exercise disk pressure below, at, and above the 4 GB GC threshold.
-        keep_free_gb: [2, 2, 2, 4, 8, 16, 50]
-    name: repro (keep ${{ matrix.keep_free_gb }} GB free)
+        # Same code and test files across disk pressure and GC modes.
+        keep_free_gb: [2, 3, 4, 5, 6, 7, 8]
+        gc: [default, disabled]
+    name: repro (${{ matrix.keep_free_gb }} GB free, GC ${{ matrix.gc }})
     steps:
       - uses: actions/checkout@v7
       - run: corepack enable
@@ -35,8 +36,11 @@ jobs:
         run: |
           ( while [ ! -f /tmp/stop ]; do df -B1 --output=avail / | tail -1; sleep 0.5; done > /tmp/free.log 2>&1 ) &
 
-      - name: Run browser tests (constrained arm should trigger Chromium GC and pass)
-        run: DEBUG=vitest:browser:gc yarn test
+      - name: Run browser tests
+        env:
+          DEBUG: vitest:browser:gc
+          VITEST_CHROMIUM_GC_DISK_THRESHOLD_GB: ${{ matrix.gc == 'disabled' && '0' || '' }}
+        run: yarn test
 
       - name: Lowest free disk during run
         if: always()
