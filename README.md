@@ -1,8 +1,8 @@
 # vitest-browser-disk-flake
 
-Minimal reproduction of [vitest#9437](https://github.com/vitest-dev/vitest/issues/9437):
-vitest browser mode fails a test file when the runner runs out of disk, with the
-misleading
+Minimal reproduction of [vitest#9437](https://github.com/vitest-dev/vitest/issues/9437)
+and verification of the workaround in [vitest#10912](https://github.com/vitest-dev/vitest/pull/10912):
+Vitest browser mode fails a test file when the runner runs out of disk, with the misleading
 
 ```
 Cannot connect to the iframe … Received URL: unknown due to CORS
@@ -30,10 +30,11 @@ coverage — so nothing but disk can be the cause.
 Free disk is exhausted only when it's smaller than the browser's scratch demand, which is
 why real CI hits this intermittently. [`repro.yml`](.github/workflows/repro.yml) makes it
 deterministic: it fills disk to a fixed margin (a ballast file), then runs the same 150
-files at two margins:
+files at two margins using the preview packages from vitest#10912:
 
-- **2 GB free → fails** — disk drops to ~0, exact `Received URL: unknown due to CORS`.
-- **50 GB free → passes** — control.
+- **2 GB free -> passes with Chromium GC** because Vitest detects disk pressure and frees
+  the browser's accumulated scratch data between files.
+- **50 GB free -> passes without Chromium GC** as the control.
 
 Same code, same files; only free disk differs. Push the repo or use **Run workflow**.
 Tune `keep_free_gb` and the file count (`node gen.mjs <N>`) to your runner.

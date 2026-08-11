@@ -8,7 +8,7 @@ jobs:
       fail-fast: false
       matrix:
         # Same code, same test files — only the free disk differs.
-        # 2 GB free: browser scratch exhausts it -> fail. 50 GB: passes (control).
+        # 2 GB free: triggers Chromium GC. 50 GB: passes without GC (control).
         keep_free_gb: [2, 2, 2, 50]
     name: repro (keep ${{ matrix.keep_free_gb }} GB free)
     steps:
@@ -35,8 +35,8 @@ jobs:
         run: |
           ( while [ ! -f /tmp/stop ]; do df -B1 --output=avail / | tail -1; sleep 0.5; done > /tmp/free.log 2>&1 ) &
 
-      - name: Run browser tests (constrained arm should fail with ENOSPC / iframe-CORS)
-        run: yarn test
+      - name: Run browser tests (constrained arm should trigger Chromium GC and pass)
+        run: DEBUG=vitest:browser:gc yarn test
 
       - name: Lowest free disk during run
         if: always()
