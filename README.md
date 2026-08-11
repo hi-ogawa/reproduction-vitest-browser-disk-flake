@@ -62,6 +62,31 @@ enough scratch space to complete the run from 4 GiB upward, although the 4 GiB d
 case came within 232 MiB of exhaustion. The workflow is expected to fail overall because
 the 2 and 3 GiB disabled controls fail.
 
+### Runtime cost
+
+The `DEBUG=vitest:browser:gc` timings from the same run show two distinct paths:
+
+| Check path | Samples | Median | Mean | p95 | Observed range |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| No GC triggered (8 GiB job) | 150 | 0.23 ms | 0.50 ms | 1.91 ms | 0.07-4.97 ms |
+| GC triggered (2 GiB job) | 150 | 31.99 ms | 35.60 ms | 58.79 ms | 13.83-75.08 ms |
+
+A non-triggered check only calls `statfs`, so its usual cost is well below 1 ms. A
+triggered check also creates a CDP session, sends `HeapProfiler.collectGarbage`, and
+detaches the session. In the 2 GiB job, the median triggered check broke down as follows:
+
+| Operation | Median | Mean | p95 |
+| --- | ---: | ---: | ---: |
+| `statfs` | 0.15 ms | 0.36 ms | 1.42 ms |
+| Create CDP session | 1.59 ms | 2.52 ms | 7.05 ms |
+| Collect garbage | 25.32 ms | 28.39 ms | 46.58 ms |
+| Detach CDP session | 3.40 ms | 4.19 ms | 9.48 ms |
+
+The sparse triggers in the 5-7 GiB jobs were more variable and reached 87.78 ms. When
+all 150 files triggered, GC accounted for about 5.3 seconds of aggregate operation time;
+checks from concurrent browser sessions can overlap, so this is not all added directly to
+wall-clock duration.
+
 ## Estimated disk usage
 
 In a previous GitHub Actions run without the workaround, the 50 GiB control reached a
