@@ -2,7 +2,6 @@
   "name": "vitest-browser-disk-flake",
   "private": true,
   "type": "module",
-  "packageManager": "yarn@4.17.0",
   "scripts": {
     "gen": "node gen.mjs",
     "test": "vitest run"
@@ -12,5 +11,6 @@
     "playwright": "^1.61.1",
     "vite": "^8.1.2",
     "vitest": "https://pkg.pr.new/vitest@fe02b5d"
-  }
+  },
+  "packageManager": "pnpm@11.21.0+sha512.521705bce689924eac72f5a3587122f362689ef6571e55ba80076fd637c11132ecffada26fad4ea79c485bfddbfd3d5a2a5b05805a77e893de71ec8a6cca3bb1"
 }

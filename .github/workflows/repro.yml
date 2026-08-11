@@ -18,9 +18,9 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: yarn
-      - run: yarn install --immutable
-      - run: yarn playwright install --with-deps chromium
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm playwright install --with-deps chromium
       - run: node gen.mjs 150
 
       - name: Constrain free disk to ${{ matrix.keep_free_gb }} GB
@@ -40,7 +40,7 @@ jobs:
         env:
           DEBUG: vitest:browser:gc
           VITEST_CHROMIUM_GC_DISK_THRESHOLD_GB: ${{ matrix.gc == 'disabled' && '0' || '' }}
-        run: yarn test
+        run: pnpm test
 
       - name: Lowest free disk during run
         if: always()
