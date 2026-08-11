@@ -8,8 +8,8 @@ jobs:
       fail-fast: false
       matrix:
         # Same code, same test files — only the free disk differs.
-        # 2 GB free: triggers Chromium GC. 50 GB: passes without GC (control).
-        keep_free_gb: [2, 2, 2, 50]
+        # Exercise disk pressure below, at, and above the 4 GB GC threshold.
+        keep_free_gb: [2, 2, 2, 4, 8, 16, 50]
     name: repro (keep ${{ matrix.keep_free_gb }} GB free)
     steps:
       - uses: actions/checkout@v7

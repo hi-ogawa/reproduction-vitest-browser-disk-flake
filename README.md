@@ -30,10 +30,11 @@ coverage — so nothing but disk can be the cause.
 Free disk is exhausted only when it's smaller than the browser's scratch demand, which is
 why real CI hits this intermittently. [`repro.yml`](.github/workflows/repro.yml) makes it
 deterministic: it fills disk to a fixed margin (a ballast file), then runs the same 150
-files at two margins using the preview packages from vitest#10912:
+files at several margins using the preview packages from vitest#10912:
 
 - **2 GB free -> passes with Chromium GC** because Vitest detects disk pressure and frees
   the browser's accumulated scratch data between files.
+- **4, 8, and 16 GB free -> exercise behavior around the 4 GB GC threshold.**
 - **50 GB free -> passes without Chromium GC** as the control.
 
 Same code, same files; only free disk differs. Push the repo or use **Run workflow**.
