@@ -2,8 +2,10 @@ import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
 
 export default defineConfig({
+  optimizeDeps: {
+    include: ['vitest', 'vitest/internal/traces', '@vitest/browser/locators'],
+  },
   test: {
-    globals: true,
     browser: {
       enabled: true,
       provider: playwright(),

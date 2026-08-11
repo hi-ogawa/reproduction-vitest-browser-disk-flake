@@ -8,8 +8,9 @@
     "test": "vitest run"
   },
   "devDependencies": {
-    "@vitest/browser-playwright": "^4.1.9",
+    "@vitest/browser-playwright": "https://pkg.pr.new/@vitest/browser-playwright@fe02b5d",
     "playwright": "^1.61.1",
-    "vitest": "^4.1.9"
+    "vite": "^8.1.2",
+    "vitest": "https://pkg.pr.new/vitest@fe02b5d"
   }
 }

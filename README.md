@@ -1,8 +1,8 @@
 # vitest-browser-disk-flake
 
-Minimal reproduction of [vitest#9437](https://github.com/vitest-dev/vitest/issues/9437):
-vitest browser mode fails a test file when the runner runs out of disk, with the
-misleading
+Minimal reproduction of [vitest#9437](https://github.com/vitest-dev/vitest/issues/9437)
+and verification of the workaround in [vitest#10912](https://github.com/vitest-dev/vitest/pull/10912):
+Vitest browser mode fails a test file when the runner runs out of disk, with the misleading
 
 ```
 Cannot connect to the iframe … Received URL: unknown due to CORS
@@ -30,10 +30,69 @@ coverage — so nothing but disk can be the cause.
 Free disk is exhausted only when it's smaller than the browser's scratch demand, which is
 why real CI hits this intermittently. [`repro.yml`](.github/workflows/repro.yml) makes it
 deterministic: it fills disk to a fixed margin (a ballast file), then runs the same 150
-files at two margins:
+files at several margins using the preview packages from vitest#10912. Each free-space
+margin runs once with the default 4 GiB GC threshold and once with the threshold set to
+zero, which disables the workaround:
 
-- **2 GB free → fails** — disk drops to ~0, exact `Received URL: unknown due to CORS`.
-- **50 GB free → passes** — control.
+- **2-4 GiB free -> exercise sustained disk pressure at or below the default threshold.**
+- **5-8 GiB free -> show whether Chromium naturally releases scratch before crossing the
+  threshold.**
+- **GC disabled -> provides the matching control for every free-space margin.**
 
-Same code, same files; only free disk differs. Push the repo or use **Run workflow**.
-Tune `keep_free_gb` and the file count (`node gen.mjs <N>`) to your runner.
+Within each paired margin, the code and files are identical and only the GC threshold
+differs. Push the repo or use **Run workflow**. Tune `keep_free_gb` and the file count
+(`node gen.mjs <N>`) to your runner.
+
+### Results
+
+Observed in [GitHub Actions run 31455127600](https://github.com/hi-ogawa/reproduction-vitest-browser-disk-flake/actions/runs/31455127600):
+
+| Configured free | Default result | GC triggers | Default minimum | Disabled result | Disabled minimum |
+| ---: | --- | ---: | ---: | --- | ---: |
+| 2 GiB | Pass | 150 | 1,999 MiB | Fail after 53 files | 230 MiB |
+| 3 GiB | Pass | 150 | 3,030 MiB | Fail after 80 files | 0 MiB |
+| 4 GiB | Pass | 150 | 4,048 MiB | Pass | 232 MiB |
+| 5 GiB | Pass | 14 | 4,057 MiB | Pass | 1,324 MiB |
+| 6 GiB | Pass | 4 | 4,511 MiB | Pass | 2,754 MiB |
+| 7 GiB | Pass | 2 | 4,564 MiB | Pass | 3,340 MiB |
+| 8 GiB | Pass | 0 | 4,650 MiB | Pass | 4,144 MiB |
+
+The default workaround prevented failures at 2 and 3 GiB. Chromium naturally released
+enough scratch space to complete the run from 4 GiB upward, although the 4 GiB disabled
+case came within 232 MiB of exhaustion. The workflow is expected to fail overall because
+the 2 and 3 GiB disabled controls fail.
+
+### Runtime cost
+
+The `DEBUG=vitest:browser:gc` timings from the same run show two distinct paths:
+
+| Check path | Samples | Median | Mean | p95 | Observed range |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| No GC triggered (8 GiB job) | 150 | 0.23 ms | 0.50 ms | 1.91 ms | 0.07-4.97 ms |
+| GC triggered (2 GiB job) | 150 | 31.99 ms | 35.60 ms | 58.79 ms | 13.83-75.08 ms |
+
+A non-triggered check only calls `statfs`, so its usual cost is well below 1 ms. A
+triggered check also creates a CDP session, sends `HeapProfiler.collectGarbage`, and
+detaches the session. In the 2 GiB job, the median triggered check broke down as follows:
+
+| Operation | Median | Mean | p95 |
+| --- | ---: | ---: | ---: |
+| `statfs` | 0.15 ms | 0.36 ms | 1.42 ms |
+| Create CDP session | 1.59 ms | 2.52 ms | 7.05 ms |
+| Collect garbage | 25.32 ms | 28.39 ms | 46.58 ms |
+| Detach CDP session | 3.40 ms | 4.19 ms | 9.48 ms |
+
+The sparse triggers in the 5-7 GiB jobs were more variable and reached 87.78 ms. When
+all 150 files triggered, GC accounted for about 5.3 seconds of aggregate operation time;
+checks from concurrent browser sessions can overlap, so this is not all added directly to
+wall-clock duration.
+
+## Estimated disk usage
+
+In a previous GitHub Actions run without the workaround, the 50 GiB control reached a
+minimum of 42,679 MiB free after running 150 files. That is roughly 8.3 GiB total, or
+57 MiB per test file. Based on that measurement, 150 files need approximately 8-9 GiB
+of scratch space without periodic Chromium GC.
+
+This is a rough estimate rather than a fixed ratio because it includes browser startup
+overhead and varies with Chromium, Playwright, concurrency, and the runner environment.
