@@ -39,3 +39,13 @@ files at several margins using the preview packages from vitest#10912:
 
 Same code, same files; only free disk differs. Push the repo or use **Run workflow**.
 Tune `keep_free_gb` and the file count (`node gen.mjs <N>`) to your runner.
+
+## Estimated disk usage
+
+In a previous GitHub Actions run without the workaround, the 50 GiB control reached a
+minimum of 42,679 MiB free after running 150 files. That is roughly 8.3 GiB total, or
+57 MiB per test file. Based on that measurement, 150 files need approximately 8-9 GiB
+of scratch space without periodic Chromium GC.
+
+This is a rough estimate rather than a fixed ratio because it includes browser startup
+overhead and varies with Chromium, Playwright, concurrency, and the runner environment.
