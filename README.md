@@ -43,6 +43,25 @@ Within each paired margin, the code and files are identical and only the GC thre
 differs. Push the repo or use **Run workflow**. Tune `keep_free_gb` and the file count
 (`node gen.mjs <N>`) to your runner.
 
+### Results
+
+Observed in [GitHub Actions run 31455127600](https://github.com/hi-ogawa/reproduction-vitest-browser-disk-flake/actions/runs/31455127600):
+
+| Free disk | Default GC | GC triggers | Minimum free | GC disabled |
+| --- | --- | ---: | ---: | --- |
+| 2 GiB | Pass | 150 | 1,999 MiB | Fail after 53 files, 230 MiB free |
+| 3 GiB | Pass | 150 | 3,030 MiB | Fail after 80 files, 0 MiB free |
+| 4 GiB | Pass | 150 | 4,048 MiB | Pass, 232 MiB free |
+| 5 GiB | Pass | 14 | 4,057 MiB | Pass, 1,324 MiB free |
+| 6 GiB | Pass | 4 | 4,511 MiB | Pass, 2,754 MiB free |
+| 7 GiB | Pass | 2 | 4,564 MiB | Pass, 3,340 MiB free |
+| 8 GiB | Pass | 0 | 4,650 MiB | Pass, 4,144 MiB free |
+
+The default workaround prevented failures at 2 and 3 GiB. Chromium naturally released
+enough scratch space to complete the run from 4 GiB upward, although the 4 GiB disabled
+case came within 232 MiB of exhaustion. The workflow is expected to fail overall because
+the 2 and 3 GiB disabled controls fail.
+
 ## Estimated disk usage
 
 In a previous GitHub Actions run without the workaround, the 50 GiB control reached a
